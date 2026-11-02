@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/AxiomHive-Tech/project-documentation-spec/blob/main/schemas/workflow.schema.json",
+  "title": "Research and Verification Workflow",
+  "description": "Configuration contract for an AI-assisted, source-based research and documentation workflow with verification stages and GitHub pull-request routing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "workflowId",
+    "purpose",
+    "goal",
+    "inputs",
+    "research",
+    "assistant",
+    "verification",
+    "outputs",
+    "github",
+    "policy",
+    "flow"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "workflowId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$" },
+    "purpose": { "type": "string", "minLength": 20, "maxLength": 2000 },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "inScope", "outOfScope", "acceptanceCriteria"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 10, "maxLength": 1000 },
+        "inScope": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "outOfScope": { "type": "array", "items": { "type": "string", "minLength": 3 } },
+        "acceptanceCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "statement"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^AC-[0-9]{3,}$" },
+              "statement": { "type": "string", "minLength": 8, "maxLength": 1000 }
+            }
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestChannel", "requiredFields", "missingFieldHandling"],
+      "properties": {
+        "requestChannel": { "enum": ["manual", "github_issue", "github_pull_request"] },
+        "requiredFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["goal", "scope", "constraints", "deliverables", "acceptance_criteria"] }
+        },
+        "missingFieldHandling": { "enum": ["request_clarification", "stop_with_status"] }
+      }
+    },
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowedHosts", "sources", "queryTemplates"],
+      "properties": {
+        "allowedHosts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9.-]+$" }
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sourceId", "title", "publisher", "kind", "url"],
+            "properties": {
+              "sourceId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+              "title": { "type": "string", "minLength": 3 },
+              "publisher": { "type": "string", "minLength": 2 },
+              "kind": { "enum": ["primary_standard", "official_documentation", "government_publication", "peer_reviewed_research", "technical_report"] },
+              "version": { "type": "string", "maxLength": 100 },
+              "url": { "type": "string", "pattern": "^https://" }
+            }
+          }
+        },
+        "queryTemplates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["purpose", "template"],
+            "properties": {
+              "purpose": { "type": "string", "minLength": 4 },
+              "template": { "type": "string", "minLength": 8 }
+            }
+          }
+        }
+      }
+    },
+    "assistant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "providerRef", "allowedOperations", "outputStatus", "repositoryCredentialAccess", "directPublication"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "providerRef": { "type": "string", "minLength": 2, "description": "Reference to provider configuration stored outside the workflow file; do not place credentials here." },
+        "allowedOperations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["draft_research_queries", "summarize_retrieved_sources", "draft_documentation"] }
+        },
+        "outputStatus": { "const": "draft_only" },
+        "repositoryCredentialAccess": { "const": false },
+        "directPublication": { "const": false }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredStages", "failureHandling", "reviewBeforePullRequest"],
+      "properties": {
+        "requiredStages": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["workflow_schema", "source_reference_resolution", "requirement_traceability", "acceptance_criteria_review", "policy_review", "editorial_review", "manual_review"] }
+        },
+        "failureHandling": { "const": "stop_before_github_route" },
+        "reviewBeforePullRequest": { "const": true },
+        "evidenceRecordPath": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.).+\\.(md|json|csv)$" }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts"],
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["artifactId", "path", "format", "purpose"],
+            "properties": {
+              "artifactId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+              "path": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.).+\\.(md|json|csv|pdf)$" },
+              "format": { "enum": ["markdown", "json", "csv", "pdf"] },
+              "purpose": { "type": "string", "minLength": 4 }
+            }
+          }
+        }
+      }
+    },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "repository", "baseBranch", "headBranch", "routeMode", "approvalRequired", "visibilityChangesAllowed"],
+      "properties": {
+        "owner": { "type": "string", "pattern": "^[A-Za-z0-9-]{1,39}$" },
+        "repository": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$" },
+        "baseBranch": { "type": "string", "minLength": 1 },
+        "headBranch": { "type": "string", "pattern": "^[A-Za-z0-9._/-]{1,200}$" },
+        "routeMode": { "const": "pull_request" },
+        "approvalRequired": { "const": true },
+        "visibilityChangesAllowed": { "const": false }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["restrictedCategories", "unsupportedClaimHandling"],
+      "properties": {
+        "restrictedCategories": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["harm_facilitation", "personal_or_operational_material", "unsupported_claim_presented_as_fact", "outside_technical_scope"] }
+        },
+        "unsupportedClaimHandling": { "const": "label_unverified_or_stop" }
+      }
+    },
+    "flow": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["moduleId", "dependsOn"],
+        "properties": {
+          "moduleId": { "enum": ["intake", "research", "assistant_draft", "verification", "documentation", "github_route"] },
+          "dependsOn": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

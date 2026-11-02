@@ -1,0 +1,144 @@
+schemaVersion: 1.0.0
+workflowId: technical-research-github
+purpose: >-
+  Research technical requirements from configured authoritative sources, prepare
+  traceable documentation, verify workflow deliverables, and route the result to
+  the configured GitHub repository for review.
+goal:
+  statement: >-
+    Produce source-referenced technical documentation that satisfies recorded
+    acceptance criteria and is routed through a reviewed GitHub pull request.
+  inScope:
+    - Record a project goal, scope, constraints, and acceptance criteria.
+    - Retrieve material from configured technical source locations.
+    - Prepare draft summaries with source identifiers and version metadata.
+    - Verify source references, requirement coverage, and artifact format.
+    - Open a GitHub pull request for review.
+  outOfScope:
+    - Direct changes to the base branch.
+    - Repository visibility changes.
+    - Unconfigured source access or unsupported factual claims.
+  acceptanceCriteria:
+    - id: AC-001
+      statement: Each research output includes a source identifier and source version or access date.
+    - id: AC-002
+      statement: Each in-scope requirement maps to a verification stage or a recorded disposition.
+    - id: AC-003
+      statement: GitHub output is routed through a pull request and requires review before merge.
+inputs:
+  requestChannel: manual
+  requiredFields:
+    - goal
+    - scope
+    - constraints
+    - deliverables
+    - acceptance_criteria
+  missingFieldHandling: request_clarification
+research:
+  allowedHosts:
+    - json-schema.org
+    - iso.org
+    - standards.ieee.org
+    - csrc.nist.gov
+    - docs.github.com
+    - owasp.org
+  sources:
+    - sourceId: json-schema-validation
+      title: JSON Schema Validation Specification, Draft 2020-12
+      publisher: JSON Schema
+      kind: primary_standard
+      version: "Draft 2020-12"
+      url: https://json-schema.org/draft/2020-12/json-schema-validation
+    - sourceId: iso-requirements-engineering
+      title: ISO/IEC/IEEE 29148:2018
+      publisher: International Organization for Standardization
+      kind: primary_standard
+      version: "2018"
+      url: https://www.iso.org/standard/72089.html
+    - sourceId: nist-ssdf
+      title: Secure Software Development Framework Version 1.1
+      publisher: National Institute of Standards and Technology
+      kind: government_publication
+      version: "1.1"
+      url: https://csrc.nist.gov/pubs/sp/800/218/final
+    - sourceId: github-contents-api
+      title: REST API endpoints for repository contents
+      publisher: GitHub Docs
+      kind: official_documentation
+      version: current online documentation
+      url: https://docs.github.com/rest/repos/contents
+  queryTemplates:
+    - purpose: Establish official scope and version information.
+      template: Find the current official specification, publication status, scope, and version for {technical_topic}.
+    - purpose: Find evidence for a defined acceptance criterion.
+      template: Find primary technical documentation that directly supports {acceptance_criterion}.
+assistant:
+  enabled: true
+  providerRef: configured-assistant-provider
+  allowedOperations:
+    - draft_research_queries
+    - summarize_retrieved_sources
+    - draft_documentation
+  outputStatus: draft_only
+  repositoryCredentialAccess: false
+  directPublication: false
+verification:
+  requiredStages:
+    - workflow_schema
+    - source_reference_resolution
+    - requirement_traceability
+    - acceptance_criteria_review
+    - policy_review
+    - editorial_review
+    - manual_review
+  failureHandling: stop_before_github_route
+  reviewBeforePullRequest: true
+  evidenceRecordPath: docs/verification-record.md
+outputs:
+  artifacts:
+    - artifactId: research-summary
+      path: docs/research-summary.md
+      format: markdown
+      purpose: Source-referenced findings with claim limitations.
+    - artifactId: requirements-register
+      path: docs/requirements.csv
+      format: csv
+      purpose: Requirements and acceptance-criteria traceability.
+    - artifactId: verification-record
+      path: docs/verification-record.md
+      format: markdown
+      purpose: Verification stages, results, evidence, and open issues.
+github:
+  owner: AxiomHive-Tech
+  repository: project-documentation-spec
+  baseBranch: main
+  headBranch: automation/technical-research
+  routeMode: pull_request
+  approvalRequired: true
+  visibilityChangesAllowed: false
+policy:
+  restrictedCategories:
+    - harm_facilitation
+    - personal_or_operational_material
+    - unsupported_claim_presented_as_fact
+    - outside_technical_scope
+  unsupportedClaimHandling: label_unverified_or_stop
+flow:
+  - moduleId: intake
+    dependsOn: []
+  - moduleId: research
+    dependsOn:
+      - intake
+  - moduleId: assistant_draft
+    dependsOn:
+      - research
+  - moduleId: verification
+    dependsOn:
+      - research
+      - assistant_draft
+  - moduleId: documentation
+    dependsOn:
+      - verification
+  - moduleId: github_route
+    dependsOn:
+      - documentation

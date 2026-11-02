@@ -1,0 +1,18 @@
+{
+  "name": "project-documentation-workflow-schema",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Schema and reference validator for modular technical research, verification, and GitHub routing workflows.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "validate:example": "node src/validate-workflow.mjs examples/research-verification.yml",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "yaml": "2.9.1"
+  }
+}
